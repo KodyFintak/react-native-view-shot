@@ -53,6 +53,7 @@ import java.util.zip.Deflater;
 import javax.annotation.Nullable;
 
 import static android.view.View.VISIBLE;
+import static com.facebook.react.bridge.UiThreadUtil.runOnUiThread;
 
 /**
  * Snapshot utility class allow to screenshot a view.
@@ -367,7 +368,20 @@ public class ViewShot implements UIBlock {
         //   Debug.waitForDebugger();
 
         final Canvas c = new Canvas(bitmap);
-        view.draw(c);
+        CountDownLatch waitLatch = new CountDownLatch(1);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                view.draw(c);
+                waitLatch.countDown();
+            }
+        });
+
+        try {
+            waitLatch.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
         //after view is drawn, go through children
         final List<View> childrenList = getAllChildren(view);
